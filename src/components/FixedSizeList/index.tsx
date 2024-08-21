@@ -10,8 +10,7 @@ const listData = new Array(100).fill(true).map((item, index) => ({
 // 每项高度
 const itemSize = 200;
 
-// Delete me
-export const Thing = () => {
+const Index = () => {
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
   const [start, setStart] = useState(0);
@@ -67,3 +66,5 @@ export const Thing = () => {
     </div>
   );
 };
+
+export default Index;
