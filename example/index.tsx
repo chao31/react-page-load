@@ -4,11 +4,7 @@ import * as ReactDOM from 'react-dom';
 import { Thing } from '../.';
 
 const App = () => {
-  return (
-    <div>
-      <Thing />
-    </div>
-  );
+  return <Thing />;
 };
 
 ReactDOM.render(<App />, document.getElementById('root'));
