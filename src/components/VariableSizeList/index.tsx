@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import faker from 'faker';
 import './index.css';
 //所有列表数据
-const listData = new Array(10000).fill(true).map((item, index) => ({
+const listData = new Array(1000).fill(true).map((item, index) => ({
   id: index,
   value: index + '_' + faker.lorem.sentences(), // 长文本,
 }));
@@ -30,6 +30,8 @@ const Index = () => {
 
   const [positions, setPositions] = useState(initPositions);
   const listDomRef = useRef(null);
+  const scrollObserverRef = useRef(null);
+  const scrollObserverRef2 = useRef(null);
 
   // 列表总高度
   const listHeight = positions[positions.length - 1].bottom;
@@ -104,12 +106,64 @@ const Index = () => {
 
   useEffect(() => {
     setScreenHeight(listDomRef.current.clientHeight);
+    initObserver();
+    initObserver2();
   }, []);
 
-  useLayoutEffect(() => {
-    updateItemsSize();
-    updateStartOffset();
-  }, [start]);
+  // useLayoutEffect(() => {
+  //   updateItemsSize();
+  //   updateStartOffset();
+  // }, [start]);
+
+  const initObserver = () => {
+    const callback = entries => {
+      // console.log('entries: ', entries);
+      entries.forEach(entry => {
+        const { isIntersecting, rootBounds, boundingClientRect } = entry;
+        if (
+          !isIntersecting &&
+          boundingClientRect.top <= rootBounds.top &&
+          boundingClientRect.bottom >= rootBounds.top
+        ) {
+          // console.log('111entry: ', entry);
+          scrollEvent();
+        }
+      });
+    };
+
+    let observer = new IntersectionObserver(callback, {
+      root: listDomRef.current,
+      rootMargin: '0px',
+      threshold: 1,
+    });
+
+    scrollObserverRef.current = observer;
+  };
+
+  const initObserver2 = () => {
+    const callback = entries => {
+      // console.log('entries: ', entries);
+      entries.forEach(entry => {
+        const { isIntersecting, rootBounds, boundingClientRect } = entry;
+        if (
+          isIntersecting &&
+          boundingClientRect.top <= 0 &&
+          boundingClientRect.bottom >= 0
+        ) {
+          // console.log('2222entry: ', entry);
+          scrollEvent();
+        }
+      });
+    };
+
+    let observer = new IntersectionObserver(callback, {
+      root: listDomRef.current,
+      rootMargin: '0px',
+      threshold: 0,
+    });
+
+    scrollObserverRef2.current = observer;
+  };
 
   const scrollEvent = () => {
     //当前滚动位置
@@ -117,37 +171,34 @@ const Index = () => {
     //此时的开始索引
     // setStart(Math.floor(scrollTop / itemSize));
     const _start = getStartIndex(scrollTop);
-    console.log('_start: ', _start);
     setStart(_start);
+    console.log('_start: ', _start);
 
     //此时的偏移量
     // setStartOffset(scrollTop - (scrollTop % itemSize));
-    updateStartOffset(_start);
+    // updateStartOffset();
   };
 
-  const updateStartOffset = (_start = start) => {
-    // if (!_start) return;
-    // let startOffset = start >= 1 ? positions[start - 1].bottom : 0;
+  const updateStartOffset = () => {
     let startOffset;
 
-    if (_start >= 1) {
+    if (start >= 1) {
       let size =
-        positions[_start].top -
-        (positions[_start - aboveCount]
-          ? positions[_start - aboveCount].top
-          : 0);
-      startOffset = positions[_start - 1].bottom - size;
+        positions[start].top -
+        (positions[start - aboveCount] ? positions[start - aboveCount].top : 0);
+      startOffset = positions[start - 1].bottom - size;
     } else {
       startOffset = 0;
     }
     setStartOffset(startOffset);
+    console.log('startOffset: ', startOffset, start);
   };
 
   return (
     <div
       ref={listDomRef}
       className="infinite-list-container"
-      onScroll={scrollEvent}
+      // onScroll={scrollEvent}
     >
       <div
         className="infinite-list-phantom"
@@ -161,8 +212,11 @@ const Index = () => {
           return (
             <Row
               item={item}
+              key={item.id}
               updateItemsSize={updateItemsSize}
               updateStartOffset={updateStartOffset}
+              scrollObserver={scrollObserverRef.current}
+              scrollObserver2={scrollObserverRef2.current}
             />
           );
         })}
@@ -171,15 +225,56 @@ const Index = () => {
   );
 };
 
-const Row = ({ item, updateItemsSize, updateStartOffset }) => {
+const Row = ({
+  item,
+  updateItemsSize,
+  updateStartOffset,
+  scrollObserver,
+  scrollObserver2,
+}) => {
+  const ref = useRef(null);
+
   useEffect(() => {
     updateItemsSize();
+    console.log(777);
     updateStartOffset();
+  }, []);
+
+  // useEffect(() => {
+  //   const dom = document.querySelector(`.J_item_${item.id}`);
+  //   scrollObserver.observe(ref.current);
+  // }, [item]);
+
+  // useEffect(() => {
+  //   return () => {
+  //     console.log('4444***: ');
+  //   };
+  // }, []);
+
+  useLayoutEffect(() => {
+    scrollObserver.observe(ref.current);
+    scrollObserver2.observe(ref.current);
+    // if (item.id == 2) {
+    //   // alert(2);
+    //   // window.ff = ref.current;
+    // }
+
+    return () => {
+      // console.log(7777, ref.current);
+
+      scrollObserver.unobserve(ref.current);
+      scrollObserver2.unobserve(ref.current);
+      // if (item.id == 2) {
+      //   // alert(3);
+      //   // window.ff = 44;
+      // }
+    };
   }, []);
 
   return (
     <div
-      className="infinite-list-item"
+      ref={ref}
+      className={`infinite-list-item J_item_${item.id}`}
       key={item.id}
       data-id={item.id}
       // style={{ height: itemSize + 'px', lineHeight: itemSize + 'px' }}
