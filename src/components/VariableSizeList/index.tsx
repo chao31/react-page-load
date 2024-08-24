@@ -1,35 +1,37 @@
 import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
-import faker from 'faker';
 import './index.css';
-//所有列表数据
-const listData = new Array(10000).fill(true).map((item, index) => ({
-  id: index,
-  value: index + '_' + faker.lorem.sentences(), // 长文本,
-}));
 
-// 预估的列表项高度
-const estimatedItemSize = 40;
+declare global {
+  interface Window {
+    ResizeObserver: any;
+    setScreenHeight: any;
+  }
+}
 
-const bufferScale = 1;
-
-const Index = () => {
+const Index = props => {
+  const {
+    // 列表数据
+    listData = [],
+    // 预估的列表项高度
+    estimatedItemSize = 40,
+    // 缓冲区的比例
+    bufferScale = 1,
+  } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
   const [start, setStart] = useState(0);
 
-  const initPositions = () => {
-    return listData.map((item, index) => {
-      return {
-        index,
-        height: estimatedItemSize,
-        top: index * estimatedItemSize,
-        bottom: (index + 1) * estimatedItemSize,
-      };
-    });
-  };
+  // 根据预估item高度，初始化一份list高度数组
+  const initPositions = () =>
+    listData.map((item, index) => ({
+      index,
+      height: estimatedItemSize,
+      top: index * estimatedItemSize,
+      bottom: (index + 1) * estimatedItemSize,
+    }));
 
   const [positions, setPositions] = useState(initPositions);
-  const listDomRef = useRef(null);
+  const listConDomRef = useRef(null);
 
   // 列表总高度
   const listHeight = positions[positions.length - 1].bottom;
@@ -103,7 +105,8 @@ const Index = () => {
   };
 
   useEffect(() => {
-    setScreenHeight(listDomRef.current.clientHeight);
+    // 监听container的高度变化，比如缩放窗口时，容器高度会变化
+    observerHeightResize();
   }, []);
 
   useLayoutEffect(() => {
@@ -111,13 +114,12 @@ const Index = () => {
     updateStartOffset();
   }, [start]);
 
-  const scrollEvent = () => {
+  const reRenderList = () => {
     //当前滚动位置
-    let scrollTop = listDomRef.current.scrollTop;
+    let scrollTop = listConDomRef.current.scrollTop;
     //此时的开始索引
     // setStart(Math.floor(scrollTop / itemSize));
     const _start = getStartIndex(scrollTop);
-    console.log('_start: ', _start);
     setStart(_start);
 
     //此时的偏移量
@@ -143,11 +145,29 @@ const Index = () => {
     setStartOffset(startOffset);
   };
 
+  const observerHeightResize = () => {
+    if (!('ResizeObserver' in window)) {
+      // init container 的 height
+      setScreenHeight(listConDomRef.current.clientHeight);
+      console.warn('浏览器不支持ResizeObserver，请pollyfill！');
+      return;
+    }
+
+    // 创建一个 ResizeObserver 实例，并传入回调函数
+    const resizeObserver = new window.ResizeObserver(entries => {
+      // contentBoxSize 属性较新，担心有兼容性问题，所以这里用 entries[0].contentRect
+      setScreenHeight(entries[0].contentRect.height);
+      reRenderList();
+    });
+    // 开始观察 container 的高度变化
+    resizeObserver.observe(listConDomRef.current);
+  };
+
   return (
     <div
-      ref={listDomRef}
+      ref={listConDomRef}
       className="infinite-list-container"
-      onScroll={scrollEvent}
+      onScroll={reRenderList}
     >
       <div
         className="infinite-list-phantom"
@@ -160,6 +180,7 @@ const Index = () => {
         {visibleData.map(item => {
           return (
             <Row
+              key={item.id}
               item={item}
               updateItemsSize={updateItemsSize}
               updateStartOffset={updateStartOffset}

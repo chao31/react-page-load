@@ -48,10 +48,8 @@
   ],
   "devDependencies": {
     "@size-limit/preset-small-lib": "^11.1.4",
-    "@types/faker": "^6.6.9",
     "@types/react": "^18.3.4",
     "@types/react-dom": "^18.3.0",
-    "faker": "4.1.0",
     "husky": "^9.1.5",
     "postcss": "^8.4.41",
     "react": "^18.3.1",
