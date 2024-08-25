@@ -8,6 +8,28 @@ declare global {
   }
 }
 
+//二分法查找
+const binarySearch = (list, value) => {
+  let start = 0;
+  let end = list.length - 1;
+  let tempIndex = null;
+  while (start <= end) {
+    let midIndex = parseInt(((start + end) / 2).toString());
+    let midValue = list[midIndex].bottom;
+    if (midValue === value) {
+      return midIndex + 1;
+    } else if (midValue < value) {
+      start = midIndex + 1;
+    } else if (midValue > value) {
+      if (tempIndex === null || tempIndex > midIndex) {
+        tempIndex = midIndex;
+      }
+      end = end - 1;
+    }
+  }
+  return tempIndex;
+};
+
 const Index = props => {
   const {
     // 列表数据
@@ -16,6 +38,7 @@ const Index = props => {
     estimatedItemSize = 40,
     // 缓冲区的比例
     bufferScale = 1,
+    children,
   } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
@@ -32,6 +55,7 @@ const Index = props => {
 
   const [positions, setPositions] = useState(initPositions);
   const listConDomRef = useRef(null);
+  const listVisibleDomRef = useRef(null);
 
   // 列表总高度
   const listHeight = positions[positions.length - 1].bottom;
@@ -40,26 +64,25 @@ const Index = props => {
   // 此时的结束索引
   const end = start + visibleCount;
 
+  // 缓冲区item个数，可能是小数，所以需要取整
+  const bufferCount = Math.floor(bufferScale * visibleCount);
   // 上方缓冲区
-  const aboveCount = Math.min(start, bufferScale * visibleCount);
+  const aboveCount = Math.min(start, bufferCount);
   // 下方缓冲区
-  const belowCount = Math.min(
-    listData.length - end,
-    bufferScale * visibleCount
-  );
+  const belowCount = Math.min(listData.length - end, bufferCount);
 
   //获取真实显示列表数据
   const visibleData = listData.slice(start - aboveCount, end + belowCount);
 
-  const updateItemsSize = () => {
-    let nodes = document.querySelectorAll('.infinite-list-item');
+  const updateItemsPosition = () => {
+    let nodes = listVisibleDomRef.current.children;
     const _positions = [...positions];
     nodes &&
       nodes.length > 0 &&
-      nodes.forEach((node: HTMLElement) => {
+      Array.from(nodes).forEach((node: HTMLElement) => {
         let rect = node.getBoundingClientRect();
         let height = rect.height;
-        let index = +node?.dataset?.id;
+        let index = +node.dataset.id;
         let oldHeight = positions[index].height;
         let dValue = oldHeight - height;
         //存在差值
@@ -82,63 +105,37 @@ const Index = props => {
     return _start;
   };
 
-  //二分法查找
-  const binarySearch = (list, value) => {
-    let start = 0;
-    let end = list.length - 1;
-    let tempIndex = null;
-    while (start <= end) {
-      let midIndex = parseInt(((start + end) / 2).toString());
-      let midValue = list[midIndex].bottom;
-      if (midValue === value) {
-        return midIndex + 1;
-      } else if (midValue < value) {
-        start = midIndex + 1;
-      } else if (midValue > value) {
-        if (tempIndex === null || tempIndex > midIndex) {
-          tempIndex = midIndex;
-        }
-        end = end - 1;
-      }
-    }
-    return tempIndex;
-  };
-
   useEffect(() => {
     // 监听container的高度变化，比如缩放窗口时，容器高度会变化
     observerHeightResize();
   }, []);
 
   useLayoutEffect(() => {
-    updateItemsSize();
-    updateStartOffset();
+    updatePostionAndOffset();
   }, [start]);
 
-  const reRenderList = () => {
+  const updatePostionAndOffset = () => {
+    updateItemsPosition();
+    updateStartOffset();
+  };
+
+  const updateStartIndex = () => {
     //当前滚动位置
     let scrollTop = listConDomRef.current.scrollTop;
     //此时的开始索引
-    // setStart(Math.floor(scrollTop / itemSize));
-    const _start = getStartIndex(scrollTop);
-    setStart(_start);
-
-    //此时的偏移量
-    // setStartOffset(scrollTop - (scrollTop % itemSize));
-    updateStartOffset(_start);
+    const newStart = getStartIndex(scrollTop);
+    setStart(newStart);
+    // 拉到列表最底部时，resize窗口时，需要快速更新视图
+    updateStartOffset(newStart);
   };
 
-  const updateStartOffset = (_start = start) => {
-    // if (!_start) return;
-    // let startOffset = start >= 1 ? positions[start - 1].bottom : 0;
+  const updateStartOffset = (newStart = start) => {
     let startOffset;
 
-    if (_start >= 1) {
+    if (newStart >= 1) {
       let size =
-        positions[_start].top -
-        (positions[_start - aboveCount]
-          ? positions[_start - aboveCount].top
-          : 0);
-      startOffset = positions[_start - 1].bottom - size;
+        positions[newStart].top - positions[newStart - aboveCount]?.top || 0;
+      startOffset = positions[newStart - 1].bottom - size;
     } else {
       startOffset = 0;
     }
@@ -157,7 +154,7 @@ const Index = props => {
     const resizeObserver = new window.ResizeObserver(entries => {
       // contentBoxSize 属性较新，担心有兼容性问题，所以这里用 entries[0].contentRect
       setScreenHeight(entries[0].contentRect.height);
-      reRenderList();
+      updateStartIndex();
     });
     // 开始观察 container 的高度变化
     resizeObserver.observe(listConDomRef.current);
@@ -167,23 +164,27 @@ const Index = props => {
     <div
       ref={listConDomRef}
       className="infinite-list-container"
-      onScroll={reRenderList}
+      onScroll={updateStartIndex}
     >
       <div
         className="infinite-list-phantom"
         style={{ height: listHeight + 'px' }}
       ></div>
       <div
+        ref={listVisibleDomRef}
         className="infinite-list"
         style={{ transform: `translate3d(0, ${startOffset}px, 0)` }}
       >
-        {visibleData.map(item => {
+        {visibleData.map((item, index) => {
+          // 拿到在ListData中真实的index
+          const key = positions[index + start - aboveCount].index;
           return (
             <Row
-              key={item.id}
+              key={key}
+              index={key}
               item={item}
-              updateItemsSize={updateItemsSize}
-              updateStartOffset={updateStartOffset}
+              updatePostionAndOffset={updatePostionAndOffset}
+              children={children}
             />
           );
         })}
@@ -192,20 +193,14 @@ const Index = props => {
   );
 };
 
-const Row = ({ item, updateItemsSize, updateStartOffset }) => {
+const Row = ({ index, item, updatePostionAndOffset, children }) => {
   useEffect(() => {
-    updateItemsSize();
-    updateStartOffset();
+    updatePostionAndOffset();
   }, []);
 
   return (
-    <div
-      className="infinite-list-item"
-      key={item.id}
-      data-id={item.id}
-      // style={{ height: itemSize + 'px', lineHeight: itemSize + 'px' }}
-    >
-      {item.value}
+    <div className="infinite-list-item" key={index} data-id={index}>
+      {typeof children === 'function' ? children({ item, index }) : children}
     </div>
   );
 };

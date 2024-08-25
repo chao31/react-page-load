@@ -21,10 +21,16 @@ import './index.css';
 // };
 const VariableSizeListExample = () => {
   //所有列表数据
-  const listData = new Array(100).fill(true).map((item, index) => ({
-    id: index,
-    value: index + '_' + faker.lorem.sentences(), // 长文本,
-  }));
+  const listData = new Array(100).fill(true).map(() => faker.lorem.sentences());
+
+  const Row = ({ item, index }) => {
+    return (
+      <div className="my-list-item">
+        <span>{`第${index}个: ${item}`}</span>
+        {index == 1 && <img src={`https://picsum.photos/200/300`} />}
+      </div>
+    );
+  };
 
   return (
     <div className="my-list">
@@ -32,7 +38,9 @@ const VariableSizeListExample = () => {
         listData={listData}
         estimatedItemSize={40}
         bufferScale={1}
-      />
+      >
+        {Row}
+      </VariableSizeList>
     </div>
   );
 };

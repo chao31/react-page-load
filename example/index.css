@@ -12,3 +12,8 @@ body{
 .my-list {
   height: 100%;
 }
+
+.my-list-item {
+  display: flex;
+  /* flex-direction: column; */
+}
