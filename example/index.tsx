@@ -26,17 +26,22 @@ async function fetchTopData() {
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   // 返回模拟数据
-  return new Array(100).fill(true).map(() => faker.lorem.sentences());
+  return new Array(100)
+    .fill(true)
+    .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
 }
 
 const VariableSizeListExample = () => {
   //所有列表数据
-  const listData = new Array(100).fill(true).map(() => faker.lorem.sentences());
+  const listData = new Array(100)
+    .fill(true)
+    .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
+  console.log('listData: ', listData);
 
   const Row = ({ item, index }) => {
     return (
-      <div className="my-list-item">
-        <span>{`第${index}个: ${item}`}</span>
+      <div className="my-list-item" key={index}>
+        <span>{item}</span>
         {/* {index == 1 && <img src={`https://picsum.photos/200/300`} />} */}
       </div>
     );

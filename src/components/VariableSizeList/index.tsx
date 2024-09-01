@@ -148,14 +148,25 @@ const Index = props => {
 
   const fetchTopData = async () => {
     const newList = await loadMoreTop();
+    const rectOld = document.querySelector(
+      `.infinite-list-item[data-id="${start}"]`
+    );
+    let yOld = rectOld.getBoundingClientRect().y;
+
     setVlistData([...newList, ...vlistData]);
-    setTimeout(() => {
-      const newStart = newList.length - 1;
-      setStart(newStart);
-      document
-        .querySelector(`.infinite-list-item[data-id="${newStart}"]`)
-        ?.scrollIntoView();
-    }, 0);
+    // setTimeout(() => {
+    // const newStart = newList.length - 1;
+    const newStart = newList.length + start;
+    setStart(newStart);
+    const rectNew = document.querySelector(
+      `.infinite-list-item[data-id="${newStart}"]`
+    );
+    rectNew?.scrollIntoView();
+    let yNew = rectNew.getBoundingClientRect().y;
+    const dValue = yNew - yOld;
+    document.querySelector('.infinite-list-container').scrollTop =
+      document.querySelector('.infinite-list-container').scrollTop + dValue;
+    // }, 0);
   };
 
   const initRowHeightObserver = () => {
@@ -319,8 +330,12 @@ const Row = ({
   );
 };
 
-const PullRefesh = () => {
-  return <div className="infinite-list-pull-refesh">下拉刷新</div>;
+const PullRefesh = ({ ref }) => {
+  return (
+    <div ref={ref} className="infinite-list-pull-refesh">
+      下拉刷新
+    </div>
+  );
 };
 
 const DownRefesh = () => {
