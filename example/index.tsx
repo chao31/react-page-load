@@ -19,6 +19,16 @@ import './index.css';
 //     </FixedSizeList>
 //   );
 // };
+
+// 模拟一个2秒后返回数据的请求
+async function fetchTopData() {
+  // 设置一个2秒的延迟
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // 返回模拟数据
+  return new Array(100).fill(true).map(() => faker.lorem.sentences());
+}
+
 const VariableSizeListExample = () => {
   //所有列表数据
   const listData = new Array(100).fill(true).map(() => faker.lorem.sentences());
@@ -27,7 +37,7 @@ const VariableSizeListExample = () => {
     return (
       <div className="my-list-item">
         <span>{`第${index}个: ${item}`}</span>
-        {index == 1 && <img src={`https://picsum.photos/200/300`} />}
+        {/* {index == 1 && <img src={`https://picsum.photos/200/300`} />} */}
       </div>
     );
   };
@@ -38,6 +48,7 @@ const VariableSizeListExample = () => {
         listData={listData}
         estimatedItemSize={40}
         bufferScale={1}
+        loadMoreTop={fetchTopData}
       >
         {Row}
       </VariableSizeList>

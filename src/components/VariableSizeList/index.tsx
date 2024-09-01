@@ -5,6 +5,9 @@ declare global {
   interface Window {
     ResizeObserver: any;
     setScreenHeight: any;
+    positions: any;
+    setStart: any;
+    setStartOffset: any;
   }
 }
 
@@ -39,14 +42,19 @@ const Index = props => {
     // 缓冲区的比例
     bufferScale = 1,
     children,
+    loadMoreTop,
   } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
+  window.setStartOffset = setStartOffset;
   const [start, setStart] = useState(0);
+  const [isAtTop, setIsAtTop] = useState(false);
+  const [vlistData, setVlistData] = useState(listData);
+  window.setStart = setStart;
 
   // 根据预估item高度，初始化一份list高度数组
   const initPositions = () =>
-    listData.map((item, index) => ({
+    vlistData.map((item, index) => ({
       index,
       height: estimatedItemSize,
       top: index * estimatedItemSize,
@@ -54,8 +62,11 @@ const Index = props => {
     }));
 
   const [positions, setPositions] = useState(initPositions);
+  window.positions = positions;
   const listConDomRef = useRef(null);
   const listVisibleDomRef = useRef(null);
+  const rowHeightObserverRef = useRef(null);
+  const canScroll = useRef(true);
 
   // 列表总高度
   const listHeight = positions[positions.length - 1].bottom;
@@ -69,14 +80,15 @@ const Index = props => {
   // 上方缓冲区
   const aboveCount = Math.min(start, bufferCount);
   // 下方缓冲区
-  const belowCount = Math.min(listData.length - end, bufferCount);
+  const belowCount = Math.min(vlistData.length - end, bufferCount);
 
   //获取真实显示列表数据
-  const visibleData = listData.slice(start - aboveCount, end + belowCount);
+  const visibleData = vlistData.slice(start - aboveCount, end + belowCount);
 
   const updateItemsPosition = () => {
     let nodes = listVisibleDomRef.current.children;
     const _positions = [...positions];
+    let aaa = 0;
     nodes &&
       nodes.length > 0 &&
       Array.from(nodes).forEach((node: HTMLElement) => {
@@ -93,8 +105,12 @@ const Index = props => {
             _positions[k].top = _positions[k - 1].bottom;
             _positions[k].bottom = _positions[k].bottom - dValue;
           }
+          if (index < start) {
+            aaa = aaa + dValue;
+          }
         }
       });
+
     setPositions(_positions);
   };
 
@@ -108,6 +124,7 @@ const Index = props => {
   useEffect(() => {
     // 监听container的高度变化，比如缩放窗口时，容器高度会变化
     observerHeightResize();
+    // initRowHeightObserver();
   }, []);
 
   useLayoutEffect(() => {
@@ -119,7 +136,44 @@ const Index = props => {
     updateStartOffset();
   };
 
+  useEffect(() => {
+    if (isAtTop && loadMoreTop) {
+      fetchTopData();
+    }
+  }, [isAtTop]);
+
+  useEffect(() => {
+    setPositions(initPositions());
+  }, [vlistData]);
+
+  const fetchTopData = async () => {
+    const newList = await loadMoreTop();
+    setVlistData([...newList, ...vlistData]);
+    setTimeout(() => {
+      const newStart = newList.length - 1;
+      setStart(newStart);
+      document
+        .querySelector(`.infinite-list-item[data-id="${newStart}"]`)
+        ?.scrollIntoView();
+    }, 0);
+  };
+
+  const initRowHeightObserver = () => {
+    if (!('ResizeObserver' in window)) {
+      console.warn('浏览器不支持ResizeObserver，请pollyfill！');
+      return;
+    }
+
+    // 创建一个 ResizeObserver 实例，并传入回调函数
+    rowHeightObserverRef.current = new window.ResizeObserver(entries => {
+      // contentBoxSize 属性较新，担心有兼容性问题，所以这里用 entries[0].contentRect
+      setScreenHeight(entries[0].contentRect.height);
+      updateStartIndex();
+    });
+  };
+
   const updateStartIndex = () => {
+    if (!canScroll.current) return;
     //当前滚动位置
     let scrollTop = listConDomRef.current.scrollTop;
     //此时的开始索引
@@ -127,6 +181,11 @@ const Index = props => {
     setStart(newStart);
     // 拉到列表最底部时，resize窗口时，需要快速更新视图
     updateStartOffset(newStart);
+    // updateStartOffset(newStart);
+
+    const isTop = scrollTop <= 0 || scrollTop <= 1; // 可以根据需要调整阈值
+
+    setIsAtTop(isTop);
   };
 
   const updateStartOffset = (newStart = start) => {
@@ -136,6 +195,7 @@ const Index = props => {
       let size =
         positions[newStart].top - positions[newStart - aboveCount]?.top || 0;
       startOffset = positions[newStart - 1].bottom - size;
+      // console.log('newStart: ', startOffset, positions[newStart - aboveCount]);
     } else {
       startOffset = 0;
     }
@@ -152,9 +212,24 @@ const Index = props => {
 
     // 创建一个 ResizeObserver 实例，并传入回调函数
     const resizeObserver = new window.ResizeObserver(entries => {
-      // contentBoxSize 属性较新，担心有兼容性问题，所以这里用 entries[0].contentRect
-      setScreenHeight(entries[0].contentRect.height);
+      console.log('111entries: ', entries);
+
+      const entry = entries[0];
+      // contentBoxSize 属性较新，担心有兼容性问题，contentRect 较老但未来可能被抛弃
+      const newHeight = entry.contentBoxSize
+        ? entry.contentBoxSize[0].blockSize
+        : entry.contentRect.height;
+      setScreenHeight(newHeight);
       updateStartIndex();
+
+      // let oldHeight;
+      // if ('oldHeight' in entry) {
+      //   oldHeight = entry.oldHeight;
+      // }
+      // console.log('Old Height:', oldHeight);
+
+      // // 更新 oldHeight 的值以便下次比较
+      // entry.oldHeight = newHeight;
     });
     // 开始观察 container 的高度变化
     resizeObserver.observe(listConDomRef.current);
@@ -178,8 +253,13 @@ const Index = props => {
         {visibleData.map((item, index) => {
           // 拿到在ListData中真实的index
           const key = positions[index + start - aboveCount].index;
+          console.log('estimatedItemSize: ', estimatedItemSize);
+
           return (
             <Row
+              canScroll={canScroll}
+              estimatedItemSize={positions[key].height}
+              start={start}
               key={key}
               index={key}
               item={item}
@@ -193,16 +273,58 @@ const Index = props => {
   );
 };
 
-const Row = ({ index, item, updatePostionAndOffset, children }) => {
+const Row = ({
+  canScroll,
+  estimatedItemSize,
+  start,
+  index,
+  item,
+  updatePostionAndOffset,
+  children,
+}) => {
   useEffect(() => {
+    let rect = rowRef.current.getBoundingClientRect();
+    let height = rect.height;
+    const dValue = height - estimatedItemSize;
+    console.log('estimatedItemSize: ', estimatedItemSize, dValue);
+
+    if (dValue > 0 && index < start) {
+      canScroll.current = false;
+      console.log(2222, index < start, dValue, estimatedItemSize, index, start);
+
+      // (document.querySelector(
+      //   '.infinite-list-container'
+      // ) as HTMLElement).style.overflow = 'hidden';
+      document.querySelector('.infinite-list-container').scrollTop =
+        document.querySelector('.infinite-list-container').scrollTop + dValue;
+      // (document.querySelector(
+      //   '.infinite-list-container'
+      // ) as HTMLElement).style.overflow = 'auto';
+      canScroll.current = true;
+    }
+
     updatePostionAndOffset();
   }, []);
+  const rowRef = useRef(null);
 
   return (
-    <div className="infinite-list-item" key={index} data-id={index}>
+    <div
+      ref={rowRef}
+      className="infinite-list-item"
+      key={index}
+      data-id={index}
+    >
       {typeof children === 'function' ? children({ item, index }) : children}
     </div>
   );
+};
+
+const PullRefesh = () => {
+  return <div className="infinite-list-pull-refesh">下拉刷新</div>;
+};
+
+const DownRefesh = () => {
+  return <div className="infinite-list-down-refesh">上拉加载</div>;
 };
 
 export default Index;
