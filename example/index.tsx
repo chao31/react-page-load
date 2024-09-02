@@ -36,7 +36,6 @@ const VariableSizeListExample = () => {
   const listData = new Array(100)
     .fill(true)
     .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
-  console.log('listData: ', listData);
 
   const Row = ({ item, index }) => {
     return (

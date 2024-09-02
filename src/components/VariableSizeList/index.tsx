@@ -137,6 +137,8 @@ const Index = props => {
   };
 
   useEffect(() => {
+    console.log('isAtTop: ', isAtTop);
+
     if (isAtTop && loadMoreTop) {
       fetchTopData();
     }
@@ -153,7 +155,7 @@ const Index = props => {
     );
     let yOld = rectOld.getBoundingClientRect().y;
 
-    setVlistData([...newList, ...vlistData]);
+    setVlistData([vlistData[0], ...newList, ...vlistData.slice(1)]);
     // setTimeout(() => {
     // const newStart = newList.length - 1;
     const newStart = newList.length + start;
@@ -197,6 +199,7 @@ const Index = props => {
     const isTop = scrollTop <= 0 || scrollTop <= 1; // 可以根据需要调整阈值
 
     setIsAtTop(isTop);
+    console.log(333, newStart);
   };
 
   const updateStartOffset = (newStart = start) => {
@@ -264,7 +267,6 @@ const Index = props => {
         {visibleData.map((item, index) => {
           // 拿到在ListData中真实的index
           const key = positions[index + start - aboveCount].index;
-          console.log('estimatedItemSize: ', estimatedItemSize);
 
           return (
             <Row
@@ -297,28 +299,32 @@ const Row = ({
     let rect = rowRef.current.getBoundingClientRect();
     let height = rect.height;
     const dValue = height - estimatedItemSize;
-    console.log('estimatedItemSize: ', estimatedItemSize, dValue);
 
     if (dValue > 0 && index < start) {
       canScroll.current = false;
       console.log(2222, index < start, dValue, estimatedItemSize, index, start);
 
-      // (document.querySelector(
-      //   '.infinite-list-container'
-      // ) as HTMLElement).style.overflow = 'hidden';
       document.querySelector('.infinite-list-container').scrollTop =
         document.querySelector('.infinite-list-container').scrollTop + dValue;
-      // (document.querySelector(
-      //   '.infinite-list-container'
-      // ) as HTMLElement).style.overflow = 'auto';
+
       canScroll.current = true;
     }
 
     updatePostionAndOffset();
+
+    if (index === 1) {
+      // window.setStart(1);
+      const rectNew = document.querySelector(
+        `.infinite-list-item[data-id="${1}"]`
+      );
+      rectNew?.scrollIntoView();
+    }
   }, []);
   const rowRef = useRef(null);
 
-  return (
+  return index === 0 ? (
+    <PullRefesh myref={rowRef} key={index} data-id={index} />
+  ) : (
     <div
       ref={rowRef}
       className="infinite-list-item"
@@ -330,9 +336,13 @@ const Row = ({
   );
 };
 
-const PullRefesh = ({ ref }) => {
+const PullRefesh = ({ myref }) => {
   return (
-    <div ref={ref} className="infinite-list-pull-refesh">
+    <div
+      ref={myref}
+      className="infinite-list-item infinite-list-pull-refesh"
+      data-id={0}
+    >
       下拉刷新
     </div>
   );
