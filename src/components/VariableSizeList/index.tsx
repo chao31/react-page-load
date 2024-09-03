@@ -153,7 +153,7 @@ const Index = props => {
     const rectOld = document.querySelector(
       `.infinite-list-item[data-id="${start}"]`
     );
-    let yOld = rectOld.getBoundingClientRect().y;
+    let bottomOld = rectOld.getBoundingClientRect().bottom;
 
     setVlistData([vlistData[0], ...newList, ...vlistData.slice(1)]);
     // setTimeout(() => {
@@ -164,8 +164,8 @@ const Index = props => {
       `.infinite-list-item[data-id="${newStart}"]`
     );
     rectNew?.scrollIntoView();
-    let yNew = rectNew.getBoundingClientRect().y;
-    const dValue = yNew - yOld;
+    let bottomNew = rectNew.getBoundingClientRect().bottom;
+    const dValue = bottomNew - bottomOld;
     document.querySelector('.infinite-list-container').scrollTop =
       document.querySelector('.infinite-list-container').scrollTop + dValue;
     // }, 0);
