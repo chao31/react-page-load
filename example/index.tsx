@@ -19,23 +19,31 @@ import './index.css';
 //     </FixedSizeList>
 //   );
 // };
-
-// 模拟一个2秒后返回数据的请求
-async function fetchTopData() {
-  // 设置一个2秒的延迟
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
-  // 返回模拟数据
-  return new Array(100)
-    .fill(true)
-    .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
-}
+let page = 1;
 
 const VariableSizeListExample = () => {
+  const [hasMoreTop, setHasMoreTop] = React.useState(true);
   //所有列表数据
   const listData = new Array(100)
     .fill(true)
     .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
+
+  // 模拟一个2秒后返回数据的请求
+  const fetchTopData = async () => {
+    if (page > 2) {
+      setHasMoreTop(false);
+      return [];
+    }
+
+    page += 1;
+    // 设置一个2秒的延迟
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 返回模拟数据
+    return new Array(100)
+      .fill(true)
+      .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
+  };
 
   const Row = ({ item, index }) => {
     return (
@@ -53,6 +61,7 @@ const VariableSizeListExample = () => {
         estimatedItemSize={40}
         bufferScale={1}
         loadMoreTop={fetchTopData}
+        hasMoreTop={hasMoreTop}
       >
         {Row}
       </VariableSizeList>
