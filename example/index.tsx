@@ -58,7 +58,7 @@ const VariableSizeListExample = () => {
     <div className="my-list">
       <VariableSizeList
         listData={listData}
-        estimatedItemSize={40}
+        estimatedItemSize={90}
         bufferScale={1}
         loadMoreTop={fetchTopData}
         hasMoreTop={hasMoreTop}

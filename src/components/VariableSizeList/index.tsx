@@ -70,6 +70,7 @@ const Index = props => {
 
   const [positions, setPositions] = useState(initPositions);
   window.positions = positions;
+  const canFetch = useRef(true);
   const listConDomRef = useRef(null);
   const listVisibleDomRef = useRef(null);
   const rowHeightObserverRef = useRef(null);
@@ -157,12 +158,18 @@ const Index = props => {
 
   useEffect(() => {
     setIsListenTop(hasMoreTop);
-    const newList = hasMoreTop ? [{}, ...vlistData] : [...vlistData.slice(1)];
+    const newList = hasMoreTop
+      ? [vlistData[0], ...vlistData]
+      : [...vlistData.slice(1)];
     setVlistData(newList);
   }, [hasMoreTop]);
 
   const fetchTopData = async () => {
+    if (!canFetch.current) return;
+
+    canFetch.current = false;
     const newList = await loadMoreTop();
+    canFetch.current = true;
 
     if (!isListenTop) {
       // setVlistData(vlistData.slice(1));
@@ -176,7 +183,8 @@ const Index = props => {
     if (!rectOld) return;
     const bottomOld = rectOld.getBoundingClientRect().bottom;
 
-    setVlistData([vlistData[0], ...newList, ...vlistData.slice(1)]);
+    const [topLoadDom, ...list] = vlistData;
+    setVlistData([topLoadDom, ...newList, ...list]);
     const newStart = newList.length + start;
     setStart(newStart);
     const rectNew = document.querySelector(
@@ -205,11 +213,16 @@ const Index = props => {
 
   const updateStartIndex = () => {
     if (!canScroll.current) return;
+
+    if (!listConDomRef.current) return;
     //当前滚动位置
     let scrollTop = listConDomRef.current.scrollTop;
     //此时的开始索引
     const newStart = getStartIndex(scrollTop);
+    if (newStart === null) return;
+
     setStart(newStart);
+    console.log('newStart: ', newStart);
     // 拉到列表最底部时，resize窗口时，需要快速更新视图
     updateStartOffset(newStart);
 
@@ -242,7 +255,7 @@ const Index = props => {
 
     // 创建一个 ResizeObserver 实例，并传入回调函数
     const resizeObserver = new window.ResizeObserver(entries => {
-      console.log('111entries: ', entries);
+      // console.log('111entries: ', entries);
 
       const entry = entries[0];
       // contentBoxSize 属性较新，担心有兼容性问题，contentRect 较老但未来可能被抛弃
@@ -318,7 +331,7 @@ const Row = ({
     let height = rect.height;
     const dValue = height - estimatedItemSize;
 
-    if (dValue > 0 && index < start) {
+    if (dValue !== 0 && index < start) {
       canScroll.current = false;
 
       document.querySelector('.infinite-list-container').scrollTop =
@@ -354,8 +367,12 @@ const Row = ({
   );
 };
 
+let isInit = true;
 const PullRefresh = ({ myref, index }) => {
   useEffect(() => {
+    if (!isInit) return;
+
+    isInit = false;
     const height = myref.current.getBoundingClientRect().height;
     window.setStart(1);
     document.querySelector('.infinite-list-container').scrollTop = height;
