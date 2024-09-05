@@ -78,7 +78,7 @@ const Index = props => {
   const listConDomRef = useRef(null);
   const listVisibleDomRef = useRef(null);
   const rowHeightObserverRef = useRef(null);
-  const canScroll = useRef(true);
+  const pauseScrollListening = useRef(false);
   const isFirstRender = useRef(true);
 
   // 列表总高度
@@ -217,7 +217,7 @@ const Index = props => {
   };
 
   const updateStartIndex = () => {
-    if (!canScroll.current) return;
+    if (pauseScrollListening.current) return;
 
     if (!listConDomRef.current) return;
     //当前滚动位置
@@ -306,9 +306,9 @@ const Index = props => {
             <Row
               listConDomRef={listConDomRef}
               isListenPullDownEvent={isListenPullDownEvent}
-              canScroll={canScroll}
+              pauseScrollListening={pauseScrollListening}
               isFirstRender={isFirstRender}
-              estimatedItemSize={positions[key].height}
+              oldHeight={positions[key].height}
               start={start}
               key={key}
               index={key}
