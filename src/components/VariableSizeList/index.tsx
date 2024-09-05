@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useLayoutEffect,
+  useCallback,
+} from 'react';
 import { Row } from './components/';
 
 import './index.css';
@@ -13,6 +19,9 @@ declare global {
     vlistData: any;
     aa: any;
     setVlistData: any;
+    r1: any;
+    r2: any;
+    r3: any;
   }
 }
 
@@ -47,17 +56,14 @@ const Index = props => {
     // 缓冲区的比例
     bufferScale = 1,
     children,
-    loadMoreTop,
-    hasMoreTop = true,
+    pullDownCallback,
+    hasMoreTopData = true,
   } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
   const [start, setStart] = useState(0);
-  const [isAtTop, setIsAtTop] = useState(false);
-  const [vlistData, setVlistData] = useState(listData);
-  const [isListenPullDownEvent, setIsListenPullDownEvent] = useState(
-    hasMoreTop
-  );
+  const [vlistData, setVlistData] = useState([null, ...listData]);
+
   window.setStartOffset = setStartOffset;
   window.setVlistData = setVlistData;
   window.vlistData = vlistData;
@@ -74,11 +80,12 @@ const Index = props => {
 
   const [positions, setPositions] = useState(initPositions);
   window.positions = positions;
-  const canFetch = useRef(true);
+  const isTopLoading = useRef(false);
   const listConDomRef = useRef(null);
   const listVisibleDomRef = useRef(null);
   const pauseScrollListening = useRef(false);
   const isFirstRender = useRef(true);
+  const startRef = useRef(0);
 
   // 列表总高度
   const listHeight = positions[positions.length - 1].bottom;
@@ -86,6 +93,7 @@ const Index = props => {
   const visibleCount = Math.ceil(screenHeight / estimatedItemSize);
   // 此时的结束索引
   const end = start + visibleCount;
+  console.log('----start: ', start);
 
   // 缓冲区item个数，可能是小数，所以需要取整
   const bufferCount = Math.floor(bufferScale * visibleCount);
@@ -161,57 +169,45 @@ const Index = props => {
   };
 
   useEffect(() => {
-    console.log('isAtTop: ', isAtTop);
-
-    if (isAtTop && loadMoreTop) {
-      fetchTopData();
-    }
-  }, [isAtTop]);
-
-  useEffect(() => {
     setPositions(initPositions());
   }, [vlistData]);
 
-  useEffect(() => {
-    setIsListenPullDownEvent(hasMoreTop);
-    const newList = hasMoreTop
-      ? [vlistData[0], ...vlistData]
-      : [...vlistData.slice(1)];
-    setVlistData(newList);
-  }, [hasMoreTop]);
+  // 监听下拉 dom 出现
+  const observerTopLoadingCallback = async () => {
+    if (isTopLoading.current) return;
 
-  const fetchTopData = async () => {
-    if (!canFetch.current) return;
+    isTopLoading.current = true;
+    const newList = await pullDownCallback();
+    isTopLoading.current = false;
 
-    canFetch.current = false;
-    const newList = await loadMoreTop();
-    canFetch.current = true;
+    // 因为callback更新拿不到上下文，所以通过ref获取最新的start
+    const start = startRef.current;
 
-    if (!isListenPullDownEvent) {
-      // setVlistData(vlistData.slice(1));
-      return;
-    }
-
-    const rectOld = document.querySelector(
+    const rect = document.querySelector(
       `.infinite-list-item[data-id="${start}"]`
     );
+    console.log('start: ', start);
 
-    if (!rectOld) return;
-    const bottomOld = rectOld.getBoundingClientRect().bottom;
+    // if (!rect) return;
+    const bottom = rect.getBoundingClientRect().bottom;
 
-    const [topLoadDom, ...list] = vlistData;
-    setVlistData([topLoadDom, ...newList, ...list]);
-    const newStart = newList.length + start;
+    setVlistData([vlistData[0], ...newList, ...vlistData.slice(1)]);
+    const newStart = start + newList.length;
+
     setStart(newStart);
     const rectNew = document.querySelector(
       `.infinite-list-item[data-id="${newStart}"]`
     );
     rectNew?.scrollIntoView();
     const bottomNew = rectNew.getBoundingClientRect().bottom;
-    const dValue = bottomNew - bottomOld;
+    const dValue = bottomNew - bottom;
     document.querySelector('.infinite-list-container').scrollTop =
       document.querySelector('.infinite-list-container').scrollTop + dValue;
   };
+
+  useEffect(() => {
+    startRef.current = start; // 确保始终是最新的状态
+  }, [start]);
 
   const updateStartIndex = () => {
     if (pauseScrollListening.current) return;
@@ -226,11 +222,6 @@ const Index = props => {
     setStart(newStart);
     // 拉到列表最底部时，resize窗口时，需要快速更新视图
     updateStartOffset(newStart);
-
-    const isTop = scrollTop <= 0 || scrollTop <= 1; // 可以根据需要调整阈值
-
-    setIsAtTop(isTop);
-    console.log('isTop', isTop);
   };
 
   const observerContainerHeightResize = () => {
@@ -273,12 +264,22 @@ const Index = props => {
       >
         {visibleData.map((item, index) => {
           // 拿到在ListData中真实的index
-          const key = positions[index + start - aboveCount].index;
+          console.log(
+            'index + start - aboveCount: ',
+            index + start - aboveCount,
+            vlistData.length,
+            positions.length
+          );
+
+          const key = positions[index + start - aboveCount]?.index;
+          // 当vlistData更新后，positions有个间隔时期没有更新过来，所以需要过滤
+          if (key === undefined) return null;
 
           return (
             <Row
+              observerTopLoadingCallback={observerTopLoadingCallback}
               listConDomRef={listConDomRef}
-              isListenPullDownEvent={isListenPullDownEvent}
+              hasMoreTopData={hasMoreTopData}
               pauseScrollListening={pauseScrollListening}
               isFirstRender={isFirstRender}
               oldHeight={positions[key].height}

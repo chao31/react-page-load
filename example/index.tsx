@@ -22,7 +22,7 @@ import './index.css';
 let page = 1;
 
 const VariableSizeListExample = () => {
-  const [hasMoreTop, setHasMoreTop] = React.useState(true);
+  const [hasMoreTopData, setHasMoreTopData] = React.useState(true);
   //所有列表数据
   const listData = new Array(100)
     .fill(true)
@@ -30,8 +30,9 @@ const VariableSizeListExample = () => {
 
   // 模拟一个2秒后返回数据的请求
   const fetchTopData = async () => {
+    console.log('请求了top数据');
     if (page > 1) {
-      setHasMoreTop(false);
+      setHasMoreTopData(false);
       return [];
     }
 
@@ -60,8 +61,8 @@ const VariableSizeListExample = () => {
         listData={listData}
         estimatedItemSize={90}
         bufferScale={1}
-        loadMoreTop={fetchTopData}
-        hasMoreTop={hasMoreTop}
+        pullDownCallback={fetchTopData}
+        hasMoreTopData={hasMoreTopData}
       >
         {Row}
       </VariableSizeList>
