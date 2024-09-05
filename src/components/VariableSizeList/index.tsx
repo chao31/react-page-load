@@ -52,13 +52,13 @@ const Index = props => {
   } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
-  window.setStartOffset = setStartOffset;
   const [start, setStart] = useState(0);
   const [isAtTop, setIsAtTop] = useState(false);
   const [vlistData, setVlistData] = useState(listData);
   const [isListenPullDownEvent, setIsListenPullDownEvent] = useState(
     hasMoreTop
   );
+  window.setStartOffset = setStartOffset;
   window.setVlistData = setVlistData;
   window.vlistData = vlistData;
   window.setStart = setStart;
@@ -77,7 +77,6 @@ const Index = props => {
   const canFetch = useRef(true);
   const listConDomRef = useRef(null);
   const listVisibleDomRef = useRef(null);
-  const rowHeightObserverRef = useRef(null);
   const pauseScrollListening = useRef(false);
   const isFirstRender = useRef(true);
 
@@ -90,20 +89,18 @@ const Index = props => {
 
   // 缓冲区item个数，可能是小数，所以需要取整
   const bufferCount = Math.floor(bufferScale * visibleCount);
-  // 上方缓冲区
+  // 上方缓冲区的item个数
   const aboveCount = Math.min(start, bufferCount);
-  // 下方缓冲区
+  // 下方缓冲区的item个数
   const belowCount = Math.min(vlistData.length - end, bufferCount);
-
   //获取真实显示列表数据
   const visibleData = vlistData.slice(start - aboveCount, end + belowCount);
 
-  const updateItemsPosition = () => {
+  // 如果某个 Item 的高度变化，需要当前 Item 的 bottom，以及后面 Item 的 top 和 bottom
+  const updatePositions = () => {
     let nodes = listVisibleDomRef.current.children;
-    const _positions = [...positions];
-    let aaa = 0;
-    nodes &&
-      nodes.length > 0 &&
+    if (nodes && nodes.length > 0) {
+      const _positions = [...positions];
       Array.from(nodes).forEach((node: HTMLElement) => {
         let rect = node.getBoundingClientRect();
         let height = rect.height;
@@ -118,13 +115,28 @@ const Index = props => {
             _positions[k].top = _positions[k - 1].bottom;
             _positions[k].bottom = _positions[k].bottom - dValue;
           }
-          if (index < start) {
-            aaa = aaa + dValue;
-          }
         }
       });
+      setPositions(_positions);
+    }
+  };
 
-    setPositions(_positions);
+  const updateStartOffset = (newStart = start) => {
+    let startOffset;
+
+    if (newStart >= 1) {
+      let size =
+        positions[newStart].top - positions[newStart - aboveCount]?.top || 0;
+      startOffset = positions[newStart - 1].bottom - size;
+      // startOffset = positions[newStart - aboveCount]?.top || 0;
+    } else {
+      startOffset = 0;
+    }
+    setStartOffset(startOffset);
+
+    // const newAboveCount = Math.min(newStart, bufferCount);
+    // const startOffset = positions[newStart - newAboveCount].top;
+    // setStartOffset(startOffset);
   };
 
   //获取列表起始索引
@@ -136,8 +148,7 @@ const Index = props => {
 
   useEffect(() => {
     // 监听container的高度变化，比如缩放窗口时，容器高度会变化
-    observerHeightResize();
-    // initRowHeightObserver();
+    observerContainerHeightResize();
   }, []);
 
   useLayoutEffect(() => {
@@ -145,7 +156,7 @@ const Index = props => {
   }, [start]);
 
   const updatePostionAndOffset = () => {
-    updateItemsPosition();
+    updatePositions();
     updateStartOffset();
   };
 
@@ -202,20 +213,6 @@ const Index = props => {
       document.querySelector('.infinite-list-container').scrollTop + dValue;
   };
 
-  const initRowHeightObserver = () => {
-    if (!('ResizeObserver' in window)) {
-      console.warn('浏览器不支持ResizeObserver，请pollyfill！');
-      return;
-    }
-
-    // 创建一个 ResizeObserver 实例，并传入回调函数
-    rowHeightObserverRef.current = new window.ResizeObserver(entries => {
-      // contentBoxSize 属性较新，担心有兼容性问题，所以这里用 entries[0].contentRect
-      setScreenHeight(entries[0].contentRect.height);
-      updateStartIndex();
-    });
-  };
-
   const updateStartIndex = () => {
     if (pauseScrollListening.current) return;
 
@@ -227,34 +224,19 @@ const Index = props => {
     if (newStart === null) return;
 
     setStart(newStart);
-    console.log('newStart: ', newStart);
     // 拉到列表最底部时，resize窗口时，需要快速更新视图
     updateStartOffset(newStart);
 
     const isTop = scrollTop <= 0 || scrollTop <= 1; // 可以根据需要调整阈值
 
     setIsAtTop(isTop);
+    console.log('isTop', isTop);
   };
 
-  const updateStartOffset = (newStart = start) => {
-    let startOffset;
-
-    if (newStart >= 1) {
-      let size =
-        positions[newStart].top - positions[newStart - aboveCount]?.top || 0;
-      startOffset = positions[newStart - 1].bottom - size;
-      // console.log('newStart: ', startOffset, positions[newStart - aboveCount]);
-    } else {
-      startOffset = 0;
-    }
-    setStartOffset(startOffset);
-  };
-
-  const observerHeightResize = () => {
+  const observerContainerHeightResize = () => {
     if (!('ResizeObserver' in window)) {
-      // init container 的 height
       setScreenHeight(listConDomRef.current.clientHeight);
-      console.warn('浏览器不支持ResizeObserver，请pollyfill！');
+      console.error('浏览器不支持ResizeObserver，请pollyfill！');
       return;
     }
 
@@ -269,15 +251,6 @@ const Index = props => {
         : entry.contentRect.height;
       setScreenHeight(newHeight);
       updateStartIndex();
-
-      // let oldHeight;
-      // if ('oldHeight' in entry) {
-      //   oldHeight = entry.oldHeight;
-      // }
-      // console.log('Old Height:', oldHeight);
-
-      // // 更新 oldHeight 的值以便下次比较
-      // entry.oldHeight = newHeight;
     });
     // 开始观察 container 的高度变化
     resizeObserver.observe(listConDomRef.current);
