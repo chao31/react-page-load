@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from 'react';
 import { Row } from './components/';
+import { binarySearch } from '../../utils';
 
 import './index.css';
 
@@ -25,28 +26,6 @@ declare global {
   }
 }
 
-//二分法查找
-const binarySearch = (list, value) => {
-  let start = 0;
-  let end = list.length - 1;
-  let tempIndex = null;
-  while (start <= end) {
-    let midIndex = parseInt(((start + end) / 2).toString());
-    let midValue = list[midIndex].bottom;
-    if (midValue === value) {
-      return midIndex + 1;
-    } else if (midValue < value) {
-      start = midIndex + 1;
-    } else if (midValue > value) {
-      if (tempIndex === null || tempIndex > midIndex) {
-        tempIndex = midIndex;
-      }
-      end = end - 1;
-    }
-  }
-  return tempIndex;
-};
-
 const Index = props => {
   const {
     // 列表数据
@@ -64,14 +43,9 @@ const Index = props => {
   const [start, setStart] = useState(0);
   const [vlistData, setVlistData] = useState([null, ...listData]);
 
-  window.setStartOffset = setStartOffset;
-  window.setVlistData = setVlistData;
-  window.vlistData = vlistData;
-  window.setStart = setStart;
-
   // 根据预估item高度，初始化一份list高度数组
   const initPositions = () =>
-    vlistData.map((item, index) => ({
+    vlistData.map((_, index) => ({
       index,
       height: estimatedItemSize,
       top: index * estimatedItemSize,
@@ -79,7 +53,6 @@ const Index = props => {
     }));
 
   const [positions, setPositions] = useState(initPositions);
-  window.positions = positions;
   const isTopLoading = useRef(false);
   const listConDomRef = useRef(null);
   const listVisibleDomRef = useRef(null);
@@ -93,8 +66,6 @@ const Index = props => {
   const visibleCount = Math.ceil(screenHeight / estimatedItemSize);
   // 此时的结束索引
   const end = start + visibleCount;
-  console.log('----start: ', start);
-
   // 缓冲区item个数，可能是小数，所以需要取整
   const bufferCount = Math.floor(bufferScale * visibleCount);
   // 上方缓冲区的item个数
@@ -129,22 +100,11 @@ const Index = props => {
     }
   };
 
+  // 渲染出来的第一个元素的top就是每次需要Offset的距离
   const updateStartOffset = (newStart = start) => {
-    let startOffset;
-
-    if (newStart >= 1) {
-      let size =
-        positions[newStart].top - positions[newStart - aboveCount]?.top || 0;
-      startOffset = positions[newStart - 1].bottom - size;
-      // startOffset = positions[newStart - aboveCount]?.top || 0;
-    } else {
-      startOffset = 0;
-    }
+    const aboveCount = Math.min(newStart, bufferCount);
+    const startOffset = positions[newStart - aboveCount].top;
     setStartOffset(startOffset);
-
-    // const newAboveCount = Math.min(newStart, bufferCount);
-    // const startOffset = positions[newStart - newAboveCount].top;
-    // setStartOffset(startOffset);
   };
 
   //获取列表起始索引
@@ -154,9 +114,16 @@ const Index = props => {
     return _start;
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const listConDom = listConDomRef.current;
     // 监听container的高度变化，比如缩放窗口时，容器高度会变化
-    observerContainerHeightResize();
+    const observer = observerContainerHeightResize();
+    observer.observe(listConDom);
+
+    return () => {
+      // clean函数之前之前，ref 已经没有了，所以上面要用 useLayoutEffect
+      observer.unobserve(listConDom);
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -173,7 +140,7 @@ const Index = props => {
   }, [vlistData]);
 
   // 监听下拉 dom 出现
-  const observerTopLoadingCallback = async () => {
+  const topLoadMoreCallback = async () => {
     if (isTopLoading.current) return;
 
     isTopLoading.current = true;
@@ -182,37 +149,51 @@ const Index = props => {
 
     // 因为callback更新拿不到上下文，所以通过ref获取最新的start
     const start = startRef.current;
-
-    const rect = document.querySelector(
-      `.infinite-list-item[data-id="${start}"]`
-    );
-    console.log('start: ', start);
-
-    // if (!rect) return;
-    const bottom = rect.getBoundingClientRect().bottom;
-
-    setVlistData([vlistData[0], ...newList, ...vlistData.slice(1)]);
     const newStart = start + newList.length;
-
-    setStart(newStart);
-    const rectNew = document.querySelector(
-      `.infinite-list-item[data-id="${newStart}"]`
-    );
-    rectNew?.scrollIntoView();
-    const bottomNew = rectNew.getBoundingClientRect().bottom;
-    const dValue = bottomNew - bottom;
-    document.querySelector('.infinite-list-container').scrollTop =
-      document.querySelector('.infinite-list-container').scrollTop + dValue;
+    const yOld = getBottomDistance(start);
+    // 渲染顶部加载更多list
+    renderTopMoreList(newList);
+    // 先将新newStart滚动到视口处
+    scrollIntoView(newStart);
+    const yNew = getBottomDistance(newStart);
+    const dValue = yNew - yOld;
+    // 微补滚动距离
+    patchScrollDistance(dValue);
   };
 
+  const getBottomDistance = start => {
+    const rect = listConDomRef.current.querySelector(
+      `.infinite-list-item[data-id="${start}"]`
+    );
+    return rect?.getBoundingClientRect()?.bottom || 0;
+  };
+
+  const renderTopMoreList = newList => {
+    setVlistData([vlistData[0], ...newList, ...vlistData.slice(1)]);
+  };
+
+  const scrollIntoView = start => {
+    setStart(start);
+    const rect = listConDomRef.current.querySelector(
+      `.infinite-list-item[data-id="${start}"]`
+    );
+    rect?.scrollIntoView();
+  };
+
+  const patchScrollDistance = distanceY => {
+    const listConDom = listConDomRef.current;
+    listConDom.scrollTop = listConDom.scrollTop + distanceY;
+  };
+
+  // 引用类型start在callback中使用
   useEffect(() => {
-    startRef.current = start; // 确保始终是最新的状态
+    startRef.current = start;
   }, [start]);
 
-  const updateStartIndex = () => {
+  const handleScrollEvent = () => {
     if (pauseScrollListening.current) return;
 
-    if (!listConDomRef.current) return;
+    // if (!listConDomRef.current) return;
     //当前滚动位置
     let scrollTop = listConDomRef.current.scrollTop;
     //此时的开始索引
@@ -233,25 +214,23 @@ const Index = props => {
 
     // 创建一个 ResizeObserver 实例，并传入回调函数
     const resizeObserver = new window.ResizeObserver(entries => {
-      // console.log('111entries: ', entries);
-
       const entry = entries[0];
       // contentBoxSize 属性较新，担心有兼容性问题，contentRect 较老但未来可能被抛弃
       const newHeight = entry.contentBoxSize
         ? entry.contentBoxSize[0].blockSize
         : entry.contentRect.height;
       setScreenHeight(newHeight);
-      updateStartIndex();
+      handleScrollEvent();
     });
-    // 开始观察 container 的高度变化
-    resizeObserver.observe(listConDomRef.current);
+
+    return resizeObserver;
   };
 
   return (
     <div
       ref={listConDomRef}
       className="infinite-list-container"
-      onScroll={updateStartIndex}
+      onScroll={handleScrollEvent}
     >
       <div
         className="infinite-list-phantom"
@@ -264,20 +243,13 @@ const Index = props => {
       >
         {visibleData.map((item, index) => {
           // 拿到在ListData中真实的index
-          console.log(
-            'index + start - aboveCount: ',
-            index + start - aboveCount,
-            vlistData.length,
-            positions.length
-          );
-
           const key = positions[index + start - aboveCount]?.index;
-          // 当vlistData更新后，positions有个间隔时期没有更新过来，所以需要过滤
+          // 当vlistData变长后，end也会更新，但positions有个间隔时期没有更新过来，所以会出现vlistData的key和positions对不上的问题
           if (key === undefined) return null;
 
           return (
             <Row
-              observerTopLoadingCallback={observerTopLoadingCallback}
+              topLoadMoreCallback={topLoadMoreCallback}
               listConDomRef={listConDomRef}
               hasMoreTopData={hasMoreTopData}
               pauseScrollListening={pauseScrollListening}

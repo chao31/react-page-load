@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 const PullRefresh = ({
   refs,
   dataId,
-  observerTopLoadingCallback,
+  topLoadMoreCallback,
   hasMoreTopData,
   start,
 }) => {
@@ -13,7 +13,7 @@ const PullRefresh = ({
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting) {
-          observerTopLoadingCallback();
+          topLoadMoreCallback();
         }
       },
       {
@@ -29,7 +29,7 @@ const PullRefresh = ({
       // clean函数之前之前，ref 已经没有了，所以上面要用 useLayoutEffect
       observer.unobserve(refs.current);
     };
-  }, [hasMoreTopData, observerTopLoadingCallback]);
+  }, [hasMoreTopData]);
 
   return (
     <div

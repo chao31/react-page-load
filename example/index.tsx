@@ -31,7 +31,7 @@ const VariableSizeListExample = () => {
   // 模拟一个2秒后返回数据的请求
   const fetchTopData = async () => {
     console.log('请求了top数据');
-    if (page > 1) {
+    if (page > 20) {
       setHasMoreTopData(false);
       return [];
     }

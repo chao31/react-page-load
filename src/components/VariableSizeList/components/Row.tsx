@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import DownRefresh from './DownRefresh';
 
 const Row = ({
-  observerTopLoadingCallback,
+  topLoadMoreCallback,
   listConDomRef,
   hasMoreTopData,
   pauseScrollListening,
@@ -54,7 +54,7 @@ const Row = ({
         refs={rowRef}
         dataId={index}
         start={start}
-        observerTopLoadingCallback={observerTopLoadingCallback}
+        topLoadMoreCallback={topLoadMoreCallback}
         hasMoreTopData={hasMoreTopData}
       />
     );
