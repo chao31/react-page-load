@@ -37,6 +37,7 @@ const Index = props => {
     children,
     pullDownCallback,
     hasMoreTopData = true,
+    loader,
   } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
@@ -261,6 +262,7 @@ const Index = props => {
               item={item}
               updatePostionAndOffset={updatePostionAndOffset}
               children={children}
+              loader={loader}
             />
           );
         })}

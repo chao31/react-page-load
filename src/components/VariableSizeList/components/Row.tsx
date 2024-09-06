@@ -14,6 +14,7 @@ const Row = ({
   item,
   updatePostionAndOffset,
   children,
+  loader,
 }) => {
   const rowRef = useRef(null);
   const shoulScrollUpToHidePullDom =
@@ -53,9 +54,9 @@ const Row = ({
         key={index}
         refs={rowRef}
         dataId={index}
-        start={start}
         topLoadMoreCallback={topLoadMoreCallback}
         hasMoreTopData={hasMoreTopData}
+        loader={loader}
       />
     );
   }

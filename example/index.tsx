@@ -31,7 +31,7 @@ const VariableSizeListExample = () => {
   // 模拟一个2秒后返回数据的请求
   const fetchTopData = async () => {
     console.log('请求了top数据');
-    if (page > 20) {
+    if (page > 2) {
       setHasMoreTopData(false);
       return [];
     }
@@ -63,6 +63,7 @@ const VariableSizeListExample = () => {
         bufferScale={1}
         pullDownCallback={fetchTopData}
         hasMoreTopData={hasMoreTopData}
+        // loader={<div>加载中...</div>}
       >
         {Row}
       </VariableSizeList>

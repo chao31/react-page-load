@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import Loading from '../../Loading/';
 
 const PullRefresh = ({
   refs,
   dataId,
   topLoadMoreCallback,
   hasMoreTopData,
-  start,
+  loader,
 }) => {
   useLayoutEffect(() => {
     if (!hasMoreTopData) return;
@@ -38,7 +39,7 @@ const PullRefresh = ({
       data-id={dataId}
       style={{ display: hasMoreTopData ? 'block' : 'none' }}
     >
-      下拉刷新
+      {loader ? loader : <Loading />}
     </div>
   );
 };

@@ -1,0 +1,51 @@
+.infinite-loading {
+  display: flex;
+  justify-content: center;
+  font-size: 0;
+  color: #555;
+}
+
+.infinite-loading-dot {
+  display: inline-block;
+  width: 2px;
+  height: 16px;
+  margin: 1px;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-radius: 0;
+  animation: spin 0.9s infinite
+    cubic-bezier(0.11, 0.49, 0.38, 0.78);
+  float: none;
+  background-color: currentColor;
+  border: 0 solid currentColor;
+    
+}
+
+.infinite-loading-dot:nth-child(3) {
+  animation-delay: -0.9s;
+}
+
+.infinite-loading-dot:nth-child(2),
+.infinite-loading-dot:nth-child(4) {
+  animation-delay: -0.65s;
+}
+
+.infinite-loading-dot:nth-child(1),
+.infinite-loading-dot:nth-child(5) {
+  animation-delay: -0.4s;
+}
+
+
+@keyframes spin {
+  0% {
+    transform: scaley(1);
+  }
+
+  80% {
+    transform: scaley(0.3);
+  }
+
+  90% {
+    transform: scaley(1);
+  }
+}
