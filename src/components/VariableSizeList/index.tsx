@@ -23,6 +23,7 @@ declare global {
     r1: any;
     r2: any;
     r3: any;
+    dd: any;
   }
 }
 
@@ -36,13 +37,18 @@ const Index = props => {
     bufferScale = 1,
     children,
     pullDownCallback,
+    pullUpCallback,
     hasMoreTopData = true,
+    hasMoreBottomData = true,
     loader,
   } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
   const [start, setStart] = useState(0);
-  const [vlistData, setVlistData] = useState([null, ...listData]);
+  // console.log('start: ', start);
+  const [vlistData, setVlistData] = useState([null, ...listData, null]);
+  window.vlistData = vlistData;
+  window.setVlistData = setVlistData;
 
   // 根据预估item高度，初始化一份list高度数组
   const initPositions = () =>
@@ -54,7 +60,10 @@ const Index = props => {
     }));
 
   const [positions, setPositions] = useState(initPositions);
+  window.positions = positions;
+
   const isTopLoading = useRef(false);
+  const isBottomLoading = useRef(false);
   const listConDomRef = useRef(null);
   const listVisibleDomRef = useRef(null);
   const pauseScrollListening = useRef(false);
@@ -136,9 +145,40 @@ const Index = props => {
     updateStartOffset();
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPositions(initPositions());
   }, [vlistData]);
+
+  const bottomLoadMoreCallback = async () => {
+    if (isBottomLoading.current) return;
+
+    isBottomLoading.current = true;
+    const newList = await pullUpCallback();
+    isBottomLoading.current = false;
+
+    if (newList.length === 0) {
+      updatePostionAndOffset();
+      return;
+    }
+
+    // 因为callback更新拿不到上下文，所以通过ref获取最新的start
+    const start = startRef.current;
+
+    const yOld = getBottomDistance(start);
+
+    setVlistData([
+      ...vlistData.slice(0, vlistData.length - 1),
+      ...newList,
+      vlistData[vlistData.length - 1],
+    ]);
+
+    // 先将新newStart滚动到视口处
+    scrollIntoView(start);
+    const yNew = getBottomDistance(start);
+    const dValue = yNew - yOld;
+    // 微补滚动距离
+    patchScrollDistance(dValue);
+  };
 
   // 监听下拉 dom 出现
   const topLoadMoreCallback = async () => {
@@ -251,8 +291,10 @@ const Index = props => {
           return (
             <Row
               topLoadMoreCallback={topLoadMoreCallback}
+              bottomLoadMoreCallback={bottomLoadMoreCallback}
               listConDomRef={listConDomRef}
               hasMoreTopData={hasMoreTopData}
+              hasMoreBottomData={hasMoreBottomData}
               pauseScrollListening={pauseScrollListening}
               isFirstRender={isFirstRender}
               oldHeight={positions[key].height}
@@ -263,6 +305,7 @@ const Index = props => {
               updatePostionAndOffset={updatePostionAndOffset}
               children={children}
               loader={loader}
+              len={vlistData.length}
             />
           );
         })}

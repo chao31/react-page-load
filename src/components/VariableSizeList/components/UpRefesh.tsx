@@ -1,20 +1,20 @@
 import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
-import Loading from '../../Loading/';
+import Loading from '../../Loading';
 
-const DownRefresh = ({
+const UpRefesh = ({
   refs,
   dataId,
-  topLoadMoreCallback,
-  hasMoreTopData,
+  bottomLoadMoreCallback,
+  hasMoreBottomData,
   loader,
 }) => {
   useLayoutEffect(() => {
-    if (!hasMoreTopData) return;
+    if (!hasMoreBottomData) return;
 
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting) {
-          topLoadMoreCallback();
+          bottomLoadMoreCallback();
         }
       },
       {
@@ -30,18 +30,18 @@ const DownRefresh = ({
       // clean函数之前之前，ref 已经没有了，所以上面要用 useLayoutEffect
       observer.unobserve(refs.current);
     };
-  }, [hasMoreTopData]);
+  }, [hasMoreBottomData]);
 
   return (
     <div
       ref={refs}
-      className="infinite-list-item infinite-list-pull-refesh"
+      className="infinite-list-item infinite-pull-down-refesh"
       data-id={dataId}
-      style={{ display: hasMoreTopData ? 'block' : 'none' }}
+      style={{ display: hasMoreBottomData ? 'block' : 'none' }}
     >
       {loader ? loader : <Loading />}
     </div>
   );
 };
 
-export default DownRefresh;
+export default UpRefesh;

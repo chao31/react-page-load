@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 
 import DownRefresh from './DownRefresh';
+import UpRefesh from './UpRefesh';
 
 const Row = ({
   topLoadMoreCallback,
+  bottomLoadMoreCallback,
   listConDomRef,
   hasMoreTopData,
+  hasMoreBottomData,
   pauseScrollListening,
   isFirstRender,
   oldHeight,
@@ -15,10 +18,10 @@ const Row = ({
   updatePostionAndOffset,
   children,
   loader,
+  len,
 }) => {
   const rowRef = useRef(null);
-  const shoulScrollUpToHidePullDom =
-    index === 1 && hasMoreTopData && isFirstRender.current;
+  const shoulScrollUpToHidePullDom = index === 1 && isFirstRender.current;
 
   useEffect(() => {
     // 上拉加载时，动态渲染出顶部 dom 后，若其高度跟estimatedItemSize不一致，会导致下面dom往下排列，需通过滚动调整使页面不动
@@ -60,6 +63,18 @@ const Row = ({
       />
     );
   }
+
+  if (index === len - 1)
+    return (
+      <UpRefesh
+        key={index}
+        refs={rowRef}
+        dataId={index}
+        bottomLoadMoreCallback={bottomLoadMoreCallback}
+        hasMoreBottomData={hasMoreBottomData}
+        loader={loader}
+      />
+    );
 
   return (
     <div

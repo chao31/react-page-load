@@ -19,31 +19,68 @@ import './index.css';
 //     </FixedSizeList>
 //   );
 // };
-let page = 1;
+
+declare global {
+  interface Window {
+    dd: any;
+  }
+}
+let pageTop = 1;
+let pageBottom = 1;
 
 const VariableSizeListExample = () => {
   const [hasMoreTopData, setHasMoreTopData] = React.useState(true);
+  const [hasMoreBottomData, setHasMoreBottomData] = React.useState(true);
+
   //所有列表数据
   const listData = new Array(100)
     .fill(true)
-    .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
+    .map((_, index) => `第${index + 1}个: ${faker.lorem.sentences()}`);
 
   // 模拟一个2秒后返回数据的请求
-  const fetchTopData = async () => {
+  const requestTopData = async () => {
     console.log('请求了top数据');
-    if (page > 2) {
+    // 设置一个2秒的延迟
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (pageTop > 2) {
       setHasMoreTopData(false);
       return [];
     }
 
-    page += 1;
-    // 设置一个2秒的延迟
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    pageTop += 1;
 
     // 返回模拟数据
     return new Array(100)
       .fill(true)
       .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
+  };
+
+  // 模拟一个2秒后返回数据的请求
+  const requestBottomData = async () => {
+    console.log('请求了bottom数据');
+    // if (pageBottom > 1) {
+    //   setHasMoreBottomData(false);
+    //   return [];
+    // }
+    // pageBottom += 1;
+
+    // 设置一个2秒的延迟
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    // await new Promise(resolve => {
+    //   window.dd = resolve;
+    // });
+
+    if (pageBottom > 1) {
+      setHasMoreBottomData(false);
+      return [];
+    }
+    pageBottom += 1;
+
+    // 返回模拟数据
+    return new Array(100)
+      .fill(true)
+      .map((_, index) => `第${index + 1}个: ${faker.lorem.sentences()}`);
   };
 
   const Row = ({ item, index }) => {
@@ -61,8 +98,10 @@ const VariableSizeListExample = () => {
         listData={listData}
         estimatedItemSize={90}
         bufferScale={1}
-        pullDownCallback={fetchTopData}
+        pullDownCallback={requestTopData}
+        pullUpCallback={requestBottomData}
         hasMoreTopData={hasMoreTopData}
+        hasMoreBottomData={hasMoreBottomData}
         // loader={<div>加载中...</div>}
       >
         {Row}
