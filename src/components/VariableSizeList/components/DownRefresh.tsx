@@ -6,7 +6,7 @@ const DownRefresh = ({
   dataId,
   topLoadMoreCallback,
   hasMoreTopData,
-  loader,
+  loaderAtTop,
 }) => {
   useLayoutEffect(() => {
     if (!hasMoreTopData) return;
@@ -39,7 +39,7 @@ const DownRefresh = ({
       data-id={dataId}
       // style={{ display: hasMoreTopData ? 'block' : 'none' }}
     >
-      {loader ? loader : <Loading hasMore={hasMoreTopData} />}
+      {loaderAtTop ? loaderAtTop : <Loading hasMore={hasMoreTopData} />}
     </div>
   );
 };

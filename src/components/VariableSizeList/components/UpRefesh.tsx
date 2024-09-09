@@ -6,7 +6,7 @@ const UpRefesh = ({
   dataId,
   bottomLoadMoreCallback,
   hasMoreBottomData,
-  loaderBottom,
+  loaderAtBottom,
 }) => {
   useLayoutEffect(() => {
     if (!hasMoreBottomData) return;
@@ -39,7 +39,11 @@ const UpRefesh = ({
       data-id={dataId}
       // style={{ display: hasMoreBottomData ? 'block' : 'none' }}
     >
-      {loaderBottom ? loaderBottom : <Loading hasMore={hasMoreBottomData} />}
+      {loaderAtBottom ? (
+        loaderAtBottom
+      ) : (
+        <Loading hasMore={hasMoreBottomData} />
+      )}
     </div>
   );
 };

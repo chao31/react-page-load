@@ -102,12 +102,12 @@ const VariableSizeListExample = () => {
         pullUpCallback={requestBottomData}
         hasMoreTopData={hasMoreTopData}
         hasMoreBottomData={hasMoreBottomData}
-        // loader={
+        // loaderAtTop={
         //   <div className="my-list-loader">
         //     {hasMoreTopData ? 'loading...' : 'No more !'}
         //   </div>
         // }
-        loaderBottom={
+        loaderAtBottom={
           <div className="my-list-loader">
             {hasMoreBottomData ? 'loading...' : 'No more !'}
           </div>
