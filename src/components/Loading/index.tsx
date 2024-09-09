@@ -1,15 +1,17 @@
 import React from 'react';
 import './index.css';
 
-const Loading = () => {
+const Loading = ({ hasMore }) => {
   return (
-    <div className="infinite-loading">
-      <div className="infinite-loading-dot"></div>
-      <div className="infinite-loading-dot"></div>
-      <div className="infinite-loading-dot"></div>
-      <div className="infinite-loading-dot"></div>
-      <div className="infinite-loading-dot"></div>
-    </div>
+    hasMore && (
+      <div className="infinite-loading">
+        <div className="infinite-loading-dot"></div>
+        <div className="infinite-loading-dot"></div>
+        <div className="infinite-loading-dot"></div>
+        <div className="infinite-loading-dot"></div>
+        <div className="infinite-loading-dot"></div>
+      </div>
+    )
   );
 };
 

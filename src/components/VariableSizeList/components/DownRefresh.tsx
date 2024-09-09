@@ -37,9 +37,9 @@ const DownRefresh = ({
       ref={refs}
       className="infinite-list-item infinite-list-pull-refesh"
       data-id={dataId}
-      style={{ display: hasMoreTopData ? 'block' : 'none' }}
+      // style={{ display: hasMoreTopData ? 'block' : 'none' }}
     >
-      {loader ? loader : <Loading />}
+      {loader ? loader : <Loading hasMore={hasMoreTopData} />}
     </div>
   );
 };

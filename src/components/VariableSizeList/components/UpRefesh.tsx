@@ -6,7 +6,7 @@ const UpRefesh = ({
   dataId,
   bottomLoadMoreCallback,
   hasMoreBottomData,
-  loader,
+  loaderBottom,
 }) => {
   useLayoutEffect(() => {
     if (!hasMoreBottomData) return;
@@ -37,9 +37,9 @@ const UpRefesh = ({
       ref={refs}
       className="infinite-list-item infinite-pull-down-refesh"
       data-id={dataId}
-      style={{ display: hasMoreBottomData ? 'block' : 'none' }}
+      // style={{ display: hasMoreBottomData ? 'block' : 'none' }}
     >
-      {loader ? loader : <Loading />}
+      {loaderBottom ? loaderBottom : <Loading hasMore={hasMoreBottomData} />}
     </div>
   );
 };

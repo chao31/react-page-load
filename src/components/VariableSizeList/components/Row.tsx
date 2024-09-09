@@ -18,6 +18,7 @@ const Row = ({
   updatePostionAndOffset,
   children,
   loader,
+  loaderBottom,
   len,
 }) => {
   const rowRef = useRef(null);
@@ -72,7 +73,7 @@ const Row = ({
         dataId={index}
         bottomLoadMoreCallback={bottomLoadMoreCallback}
         hasMoreBottomData={hasMoreBottomData}
-        loader={loader}
+        loaderBottom={loaderBottom}
       />
     );
 

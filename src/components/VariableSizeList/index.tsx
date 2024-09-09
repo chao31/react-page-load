@@ -23,7 +23,7 @@ declare global {
     r1: any;
     r2: any;
     r3: any;
-    dd: any;
+    updatePostionAndOffset: any;
   }
 }
 
@@ -41,11 +41,12 @@ const Index = props => {
     hasMoreTopData = true,
     hasMoreBottomData = true,
     loader,
+    loaderBottom,
   } = props;
   const [screenHeight, setScreenHeight] = useState(0);
   const [startOffset, setStartOffset] = useState(0);
   const [start, setStart] = useState(0);
-  // console.log('start: ', start);
+  console.log('start: ', start);
   const [vlistData, setVlistData] = useState([null, ...listData, null]);
   window.vlistData = vlistData;
   window.setVlistData = setVlistData;
@@ -144,6 +145,7 @@ const Index = props => {
     updatePositions();
     updateStartOffset();
   };
+  window.updatePostionAndOffset = updatePostionAndOffset;
 
   useLayoutEffect(() => {
     setPositions(initPositions());
@@ -156,13 +158,15 @@ const Index = props => {
     const newList = await pullUpCallback();
     isBottomLoading.current = false;
 
-    if (newList.length === 0) {
-      updatePostionAndOffset();
-      return;
-    }
-
     // 因为callback更新拿不到上下文，所以通过ref获取最新的start
     const start = startRef.current;
+
+    if (newList.length === 0) {
+      // updatePostionAndOffset();
+      updatePositions();
+      updateStartOffset(start);
+      return;
+    }
 
     const yOld = getBottomDistance(start);
 
@@ -305,6 +309,7 @@ const Index = props => {
               updatePostionAndOffset={updatePostionAndOffset}
               children={children}
               loader={loader}
+              loaderBottom={loaderBottom}
               len={vlistData.length}
             />
           );
@@ -312,10 +317,6 @@ const Index = props => {
       </div>
     </div>
   );
-};
-
-const UpRefesh = () => {
-  return <div className="infinite-list-down-refesh">上拉加载</div>;
 };
 
 export default Index;

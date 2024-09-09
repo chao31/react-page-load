@@ -1,7 +1,7 @@
 import 'react-app-polyfill/ie11';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { FixedSizeList, VariableSizeList } from '../.';
+import VariableSizeList from '../src/components/VariableSizeList';
 import * as faker from 'faker';
 
 import './index.css';
@@ -53,7 +53,7 @@ const VariableSizeListExample = () => {
     // 返回模拟数据
     return new Array(100)
       .fill(true)
-      .map((_, index) => `第${index}个: ${faker.lorem.sentences()}`);
+      .map((_, index) => `第${index + 1}个: ${faker.lorem.sentences()}`);
   };
 
   // 模拟一个2秒后返回数据的请求
@@ -102,7 +102,16 @@ const VariableSizeListExample = () => {
         pullUpCallback={requestBottomData}
         hasMoreTopData={hasMoreTopData}
         hasMoreBottomData={hasMoreBottomData}
-        // loader={<div>加载中...</div>}
+        // loader={
+        //   <div className="my-list-loader">
+        //     {hasMoreTopData ? 'loading...' : 'No more !'}
+        //   </div>
+        // }
+        loaderBottom={
+          <div className="my-list-loader">
+            {hasMoreBottomData ? 'loading...' : 'No more !'}
+          </div>
+        }
       >
         {Row}
       </VariableSizeList>
