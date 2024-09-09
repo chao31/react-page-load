@@ -9,6 +9,10 @@ body{
   /* height:100%; */
 }
 
+.wrap {
+  display: flex;
+}
+
 .my-list {
   margin-top: 20px;
   width: 700px;

@@ -84,7 +84,9 @@ const Row = ({
       key={index}
       data-id={index}
     >
-      {typeof children === 'function' ? children({ item, index }) : children}
+      {typeof children === 'function'
+        ? children({ item, index: index - 1 })
+        : children}
     </div>
   );
 };
